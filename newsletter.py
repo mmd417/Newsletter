@@ -39,7 +39,7 @@ OUTLETS = [
     {
         "name": "Gazeta Wyborcza",
         "bias": "center-left / liberal",
-        "rss": "https://wyborcza.pl/rss/wyborcza.xml",
+        "rss": "https://wyborcza.pl/pub/rss/najnowsze_wyborcza.xml",
         "paywall": True,
         "cookie_env": "GW_COOKIES",
     },
