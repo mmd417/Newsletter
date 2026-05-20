@@ -22,10 +22,15 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
-GMAIL_USER        = os.environ["GMAIL_USER"]          # your Gmail address
-GMAIL_APP_PASSWORD = os.environ["GMAIL_APP_PASSWORD"] # Gmail app password
-RECIPIENT_EMAIL   = os.environ.get("RECIPIENT_EMAIL", GMAIL_USER)
+ANTHROPIC_API_KEY  = os.environ["ANTHROPIC_API_KEY"]
+GMAIL_USER         = os.environ["GMAIL_USER"]           # sending address
+GMAIL_APP_PASSWORD = os.environ["GMAIL_APP_PASSWORD"]   # Gmail app password
+# Comma-separated list of recipients, e.g. "a@gmail.com,b@gmail.com"
+RECIPIENTS = [
+    r.strip()
+    for r in os.environ.get("RECIPIENT_EMAIL", GMAIL_USER).split(",")
+    if r.strip()
+]
 
 # Paywalled outlets: store cookies as JSON strings in GitHub Secrets
 # e.g. GW_COOKIES = '[{"name":"piano_id","value":"...","domain":".wyborcza.pl"}]'
@@ -510,18 +515,18 @@ def render_html_email(newsletter: dict) -> str:
 # ── Email Sending ──────────────────────────────────────────────────────────────
 
 def send_email(html_body: str, week_range: str):
-    """Send the newsletter via Gmail SMTP."""
+    """Send the newsletter to all recipients via Gmail SMTP."""
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"🇵🇱 Weekly Debrief: Poland — {week_range}"
     msg["From"]    = GMAIL_USER
-    msg["To"]      = RECIPIENT_EMAIL
+    msg["To"]      = ", ".join(RECIPIENTS)
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-    log.info(f"Sending email to {RECIPIENT_EMAIL}...")
+    log.info(f"Sending email to: {', '.join(RECIPIENTS)}")
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        server.sendmail(GMAIL_USER, RECIPIENT_EMAIL, msg.as_string())
-    log.info("Email sent successfully.")
+        server.sendmail(GMAIL_USER, RECIPIENTS, msg.as_string())
+    log.info(f"Email sent successfully to {len(RECIPIENTS)} recipient(s).")
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
