@@ -35,6 +35,7 @@ LOOKBACK_DAYS = 7  # articles published within the last 7 days
 
 # ── Outlet Definitions ─────────────────────────────────────────────────────────
 OUTLETS = [
+    # ── Paywalled (falls back to RSS if no cookies) ────────────────────────────
     {
         "name": "Gazeta Wyborcza",
         "bias": "center-left / liberal",
@@ -42,6 +43,7 @@ OUTLETS = [
         "paywall": True,
         "cookie_env": "GW_COOKIES",
     },
+    # ── Free RSS ───────────────────────────────────────────────────────────────
     {
         "name": "Rzeczpospolita",
         "bias": "center-right / conservative",
@@ -66,26 +68,90 @@ OUTLETS = [
         "rss": "https://www.polsatnews.pl/rss/wszystkie.xml",
         "paywall": False,
     },
+    {
+        # Weekly magazine; deepest investigative tradition in Poland
+        "name": "Tygodnik Powszechny",
+        "bias": "center-left / Catholic liberal",
+        "rss": "https://www.tygodnikpowszechny.pl/rss.xml",
+        "paywall": False,
+    },
+    {
+        # Right-wing weekly; flagship voice of the national-conservative camp
+        "name": "Do Rzeczy",
+        "bias": "right-wing / national-conservative",
+        "rss": "https://dorzeczy.pl/feed/",
+        "paywall": False,
+    },
+    {
+        # High-traffic centrist news portal
+        "name": "Interia Fakty",
+        "bias": "centrist",
+        "rss": "https://fakty.interia.pl/feed",
+        "paywall": False,
+    },
+    {
+        # Largest Polish web portal; broad centrist audience
+        "name": "WP Wiadomości",
+        "bias": "centrist",
+        "rss": "https://wiadomosci.wp.pl/rss.xml",
+        "paywall": False,
+    },
+    {
+        # Leading financial/business daily
+        "name": "Bankier.pl",
+        "bias": "business / centrist",
+        "rss": "https://www.bankier.pl/rss/wiadomosci.xml",
+        "paywall": False,
+    },
 ]
 
 # ── Claude System Prompt ───────────────────────────────────────────────────────
-SYSTEM_PROMPT = """You are an expert analyst of Polish politics, society, and media.
-You will receive a JSON list of news articles collected from multiple Polish outlets over the past week.
-Each article has: title, summary/description, outlet name, outlet political bias, and URL.
+SYSTEM_PROMPT = """You are a senior editor writing a weekly briefing on Poland for an English-speaking reader \
+who follows international affairs but has limited background on Polish politics, history, or institutions.
 
-Your task:
-1. FILTER: Remove low-signal articles (celebrity gossip, minor local events, sports unless nationally significant, PR pieces, duplicates of the same story — keep only the most informative version).
-2. RANK: Identify the 8–12 most important and newsworthy stories of the week.
-3. SUMMARIZE: For each selected story, write:
-   - A clear, factual English headline (your own words, not a translation of the original)
-   - A 2-sentence English summary capturing what happened and why it matters
-   - Source attribution with bias label
-4. GROUP: Organize stories under these sections (omit any section with no stories):
-   - 🏛️ Politics & Government
-   - 💰 Economy & Business
-   - 🇪🇺 International & EU Affairs
-   - 🧭 Society & Culture
-5. BIAS NOTE: Where the same story is covered differently across outlets with opposing biases, add a one-sentence "Framing note:" after the summary flagging the divergence.
+You will receive a JSON list of news articles from Polish outlets over the past week. \
+Each article includes: title, summary/description, outlet name, political bias, and URL. \
+You may also receive social media excerpts flagged with "source": "social_media".
+
+— SELECTION STANDARD —
+Include exactly 4–6 stories — never fewer than 4, never more than 6. A story earns its place only if it:
+  • Signals a real shift in Polish politics, law, economy, or foreign policy
+  • Reveals how Polish institutions or society actually function
+  • Gives an informed reader genuine insight unavailable from generic Western coverage
+Exclude: gossip, routine crime, minor local events, PR, near-duplicates (keep the best version).
+Fewer strong stories beat a padded list.
+
+— FOR EACH STORY, WRITE THREE TIGHT SECTIONS —
+
+1. WHAT HAPPENED
+One crisp headline (your framing, not a translation). Then 2 sentences max: who did what, and when/where.
+
+2. WHY IT MATTERS
+2–3 sentences. Assume the reader does NOT know Polish political history or institutions — \
+briefly name any essential background (e.g. what a referenced law, party, or institution is, \
+why a particular relationship or conflict has been ongoing). Then state why this development is significant \
+beyond Poland's borders or why it changes something meaningful domestically.
+
+3. SENTIMENT & REACTION
+3–4 sentences, as specific as possible. Pull directly from the articles: \
+quote or paraphrase named politicians, officials, or public figures where available. \
+If any article references Twitter/X posts, social media trends, or online public reaction, \
+surface those explicitly (e.g. "#XYZ trended on Polish Twitter," or "a viral post by @handle argued…"). \
+Where outlets with opposing political biases frame the same event differently, name both framings \
+(e.g. "Conservative Rzeczpospolita calls this … while liberal TVN24 frames it as …").
+Be specific; avoid vague phrases like "many Poles feel" without evidence from the articles.
+
+— STYLE —
+Write in plain, direct English. No padding, no throat-clearing. \
+Each section should be as short as it can be while remaining complete. \
+Prefer concrete nouns and active verbs.
+
+— GROUPING —
+Organise stories under (omit empty sections):
+  🏛️ Politics & Government
+  💰 Economy & Business
+  🇪🇺 International & EU Affairs
+  🧭 Society & Culture
 
 Output format — return ONLY valid JSON, no markdown fences, no preamble:
 {
@@ -96,8 +162,9 @@ Output format — return ONLY valid JSON, no markdown fences, no preamble:
       "stories": [
         {
           "headline": "...",
-          "summary": "...",
-          "framing_note": "..." or null,
+          "what_happened": "...",
+          "why_it_matters": "...",
+          "sentiment_and_reaction": "...",
           "source": "Outlet Name",
           "bias": "center-left / liberal",
           "url": "https://..."
@@ -204,8 +271,96 @@ def fetch_paywall_articles(outlet: dict) -> list[dict]:
     return articles
 
 
+def _parse_rss_feed(url: str, outlet_name: str, max_items: int = 10) -> list[dict]:
+    """Shared helper: parse an RSS feed and return normalised article dicts."""
+    items = []
+    try:
+        feed = feedparser.parse(url)
+        for entry in feed.entries[:max_items]:
+            summary = entry.get("summary", "") or entry.get("description", "")
+            summary = BeautifulSoup(summary, "html.parser").get_text(separator=" ").strip()
+            items.append({
+                "title":   entry.get("title", "").strip()[:200],
+                "summary": summary[:500],
+                "url":     entry.get("link", ""),
+                "outlet":  outlet_name,
+                "bias":    "public sentiment",
+                "source":  "social_media",
+            })
+    except Exception as e:
+        log.warning(f"[{outlet_name}] RSS fetch failed: {e}")
+    return items
+
+
+def fetch_social_media_signals() -> list[dict]:
+    """
+    Collect public sentiment signals from Polish Reddit communities and Wykop.
+    Both sources are open — no API key required.
+
+    Reddit:  JSON API (reddit.com/r/<sub>/top.json) — returns top posts of the week.
+    Wykop:   RSS feed for trending/hot content.
+
+    Twitter/X upgrade path: replace or extend this function with X API v2
+    (search/recent endpoint) using TWITTER_BEARER_TOKEN stored in env/secrets.
+    """
+    signals: list[dict] = []
+
+    # ── Reddit ─────────────────────────────────────────────────────────────────
+    REDDIT_SUBS = [
+        ("r/poland",      "https://www.reddit.com/r/poland/top.json?t=week&limit=10"),
+        ("r/Polska",      "https://www.reddit.com/r/Polska/top.json?t=week&limit=10"),
+        ("r/europe (PL)", "https://www.reddit.com/r/europe/search.json?q=Poland&sort=top&t=week&limit=10"),
+    ]
+    headers = {"User-Agent": "PolishPressWeekly/1.0 (newsletter bot; contact via GitHub)"}
+    for name, url in REDDIT_SUBS:
+        try:
+            resp = requests.get(url, headers=headers, timeout=10)
+            resp.raise_for_status()
+            posts = resp.json().get("data", {}).get("children", [])
+            for post in posts:
+                d = post.get("data", {})
+                title   = d.get("title", "").strip()
+                selftext = d.get("selftext", "")[:300].strip()
+                score   = d.get("score", 0)
+                comments = d.get("num_comments", 0)
+                link    = "https://reddit.com" + d.get("permalink", "")
+                if not title:
+                    continue
+                signals.append({
+                    "title":   f"[Reddit {name}] {title}",
+                    "summary": (
+                        f"{selftext} " if selftext else ""
+                    ) + f"(↑{score} upvotes, {comments} comments)",
+                    "url":     link,
+                    "outlet":  f"Reddit {name}",
+                    "bias":    "public sentiment",
+                    "source":  "social_media",
+                })
+            log.info(f"[Reddit {name}] {len(posts)} posts collected")
+        except Exception as e:
+            log.warning(f"[Reddit {name}] fetch failed: {e}")
+
+    # ── Wykop ──────────────────────────────────────────────────────────────────
+    # Wykop is Poland's largest link-aggregator / social news site (~Reddit equivalent).
+    # The RSS feed surfaces the week's most-upvoted ("wykopane") links.
+    WYKOP_FEEDS = [
+        ("Wykop / Trending",  "https://wykop.pl/rss/trendy"),
+        ("Wykop / Główna",    "https://wykop.pl/rss/wykopalisko"),
+    ]
+    for name, url in WYKOP_FEEDS:
+        items = _parse_rss_feed(url, name, max_items=8)
+        # Prefix titles so Claude knows the source
+        for item in items:
+            item["title"] = f"[{name}] {item['title']}"
+        signals.extend(items)
+        log.info(f"[{name}] {len(items)} posts collected")
+
+    log.info(f"[Social Media total] {len(signals)} signals collected")
+    return signals
+
+
 def collect_all_articles() -> list[dict]:
-    """Collect articles from all configured outlets."""
+    """Collect articles from all configured outlets, plus social media signals."""
     all_articles = []
     for outlet in OUTLETS:
         if outlet.get("paywall"):
@@ -213,6 +368,10 @@ def collect_all_articles() -> list[dict]:
         else:
             articles = fetch_rss_articles(outlet)
         all_articles.extend(articles)
+
+    # Append social media signals as supplementary context for Claude
+    all_articles.extend(fetch_social_media_signals())
+
     log.info(f"Total articles collected: {len(all_articles)}")
     return all_articles
 
@@ -229,7 +388,7 @@ def summarize_with_claude(articles: list[dict]) -> dict:
 
     log.info(f"Sending {len(payload)} articles to Claude for summarization...")
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=4096,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_message}],
@@ -261,35 +420,48 @@ def render_html_email(newsletter: dict) -> str:
           </h2>
         </td></tr>"""
         for story in section.get("stories", []):
-            framing = ""
-            if story.get("framing_note"):
-                framing = f"""
-                <p style="margin:8px 0 0;font-size:13px;color:#7a6a55;
-                           font-style:italic;border-left:3px solid #d4a84b;
-                           padding-left:10px;">
-                  📌 Framing: {story['framing_note']}
-                </p>"""
             stories_html += f"""
-        <tr><td style="padding:14px 0;border-bottom:1px solid #f0ebe3;">
+        <tr><td style="padding:20px 0;border-bottom:1px solid #f0ebe3;">
+
+          <!-- Headline -->
           <a href="{story['url']}" style="text-decoration:none;">
-            <p style="margin:0 0 6px;font-size:15px;font-weight:bold;
+            <p style="margin:0 0 14px;font-size:16px;font-weight:bold;
                       color:#1a1a1a;font-family:Georgia,serif;line-height:1.4;">
               {story['headline']}
             </p>
           </a>
-          <p style="margin:0 0 6px;font-size:14px;color:#444;line-height:1.6;">
-            {story['summary']}
+
+          <!-- What happened -->
+          <p style="margin:0 0 4px;font-size:11px;font-weight:bold;color:#b0956a;
+                    letter-spacing:1.2px;text-transform:uppercase;">What happened</p>
+          <p style="margin:0 0 14px;font-size:14px;color:#333;line-height:1.7;">
+            {story['what_happened']}
           </p>
+
+          <!-- Why it matters -->
+          <p style="margin:0 0 4px;font-size:11px;font-weight:bold;color:#b0956a;
+                    letter-spacing:1.2px;text-transform:uppercase;">Why it matters</p>
+          <p style="margin:0 0 14px;font-size:14px;color:#333;line-height:1.7;">
+            {story['why_it_matters']}
+          </p>
+
+          <!-- Sentiment & reaction -->
+          <p style="margin:0 0 4px;font-size:11px;font-weight:bold;color:#b0956a;
+                    letter-spacing:1.2px;text-transform:uppercase;">Sentiment &amp; reaction</p>
+          <p style="margin:0 0 14px;font-size:14px;color:#333;line-height:1.7;
+                    border-left:3px solid #e8e0d5;padding-left:12px;">
+            {story['sentiment_and_reaction']}
+          </p>
+
+          <!-- Source tag -->
           <p style="margin:0;font-size:12px;color:#999;">
             <span style="background:#f5f0ea;border-radius:3px;
                          padding:2px 7px;margin-right:6px;">
               {story['source']}
             </span>
-            <span style="color:#b0956a;">
-              {story['bias']}
-            </span>
+            <span style="color:#b0956a;">{story['bias']}</span>
           </p>
-          {framing}
+
         </td></tr>"""
 
     return f"""<!DOCTYPE html>
