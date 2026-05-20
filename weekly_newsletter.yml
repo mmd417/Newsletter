@@ -1,4 +1,4 @@
-name: Polish Press Weekly Newsletter
+name: Weekly Debrief Poland
 
 on:
   # Runs every Sunday at 6:00 PM Chicago time (= 23:00 UTC, accounting for CDT)

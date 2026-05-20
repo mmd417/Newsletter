@@ -28,7 +28,7 @@ from newsletter import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 def main():
-    log.info("=== Polish Press Weekly — Preview Run (no email) ===")
+    log.info("=== Weekly Debrief: Poland — Preview Run (no email) ===")
 
     # ── Step 1: Collect articles ───────────────────────────────────────────────
     articles = collect_all_articles()
