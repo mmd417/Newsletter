@@ -138,17 +138,21 @@ why a particular relationship or conflict has been ongoing). Then state why this
 beyond Poland's borders or why it changes something meaningful domestically.
 
 3. SENTIMENT & REACTION
-3–4 sentences, as specific as possible. Pull directly from the articles: \
-quote or paraphrase named politicians, officials, or public figures where available. \
-If any article references Twitter/X posts, social media trends, or online public reaction, \
-surface those explicitly (e.g. "#XYZ trended on Polish Twitter," or "a viral post by @handle argued…"). \
-Where outlets with opposing political biases frame the same event differently, name both framings \
-(e.g. "Conservative Rzeczpospolita calls this … while liberal TVN24 frames it as …").
-Be specific; avoid vague phrases like "many Poles feel" without evidence from the articles.
+2 sentences maximum. Lead with the sharpest, most specific reaction available — \
+quote or paraphrase a named person with their full name and role on first mention \
+(e.g. "Donald Tusk, Poland's Prime Minister," not just "Tusk"). \
+If outlets frame the story differently, capture that divergence in one sentence. \
+Cut anything that cannot be sourced directly to the articles.
+
+— NAMES & TITLES —
+Every person named in any section must be identified on first mention with their full name and role \
+(e.g. "Andrzej Duda, Poland's President," "Jarosław Kaczyński, leader of the opposition PiS party," \
+"Ursula von der Leyen, President of the European Commission"). \
+Never assume the reader recognises a name from Polish or European politics.
 
 — STYLE —
 Write in plain, direct English. No padding, no throat-clearing. \
-Each section should be as short as it can be while remaining complete. \
+Each section should be as short as it can be while still being complete. \
 Prefer concrete nouns and active verbs.
 
 — GROUPING —
@@ -514,13 +518,68 @@ def render_html_email(newsletter: dict) -> str:
 
 # ── Email Sending ──────────────────────────────────────────────────────────────
 
-def send_email(html_body: str, week_range: str):
-    """Send the newsletter to all recipients via Gmail SMTP."""
+def render_substack_text(newsletter: dict) -> str:
+    """
+    Render a plain-text version of the newsletter formatted for clean
+    copy-paste into Substack. Uses markdown-style headings and dividers
+    that Substack's editor preserves on paste.
+    """
+    week_range = newsletter.get("week_range", "")
+    lines = []
+    lines.append(f"🇵🇱 Weekly Debrief: Poland — {week_range}")
+    lines.append("")
+
+    for section in newsletter.get("sections", []):
+        lines.append(f"── {section['title']} ──")
+        lines.append("")
+        for story in section.get("stories", []):
+            lines.append(f"### {story['headline']}")
+            lines.append("")
+            lines.append("WHAT HAPPENED")
+            lines.append(story["what_happened"])
+            lines.append("")
+            lines.append("WHY IT MATTERS")
+            lines.append(story["why_it_matters"])
+            lines.append("")
+            lines.append("SENTIMENT & REACTION")
+            lines.append(story["sentiment_and_reaction"])
+            lines.append("")
+            lines.append(f"Source: {story['source']} · {story['bias']} · {story['url']}")
+            lines.append("")
+            lines.append("—" * 60)
+            lines.append("")
+
+    lines.append("Sources: Gazeta Wyborcza · Rzeczpospolita · Onet.pl · TVN24 · Polsat News · Tygodnik Powszechny · Do Rzeczy · Interia · WP · Bankier.pl")
+    lines.append(f"Generated {datetime.now().strftime('%B %d, %Y')}")
+    return "\n".join(lines)
+
+
+def send_email(html_body: str, substack_text: str, week_range: str):
+    """
+    Send the newsletter to all recipients via Gmail SMTP.
+    Includes the styled HTML preview and a plain-text Substack-ready
+    copy-paste section at the bottom of the same email.
+    """
+    # Wrap the substack text in a minimal HTML block appended below the styled newsletter
+    substack_block = f"""
+<div style="margin:40px auto;max-width:620px;font-family:monospace;font-size:13px;
+            color:#333;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;
+            padding:28px 32px;">
+  <p style="margin:0 0 16px;font-size:12px;font-weight:bold;color:#999;
+             letter-spacing:1px;text-transform:uppercase;">
+    📋 Substack copy-paste version below
+  </p>
+  <pre style="margin:0;white-space:pre-wrap;font-family:Georgia,serif;
+              font-size:14px;line-height:1.8;color:#222;">{substack_text}</pre>
+</div>"""
+
+    full_html = html_body.replace("</body>", substack_block + "</body>")
+
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"🇵🇱 Weekly Debrief: Poland — {week_range}"
     msg["From"]    = GMAIL_USER
     msg["To"]      = ", ".join(RECIPIENTS)
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
+    msg.attach(MIMEText(full_html, "html", "utf-8"))
 
     log.info(f"Sending email to: {', '.join(RECIPIENTS)}")
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
@@ -539,9 +598,10 @@ def main():
         log.error("No articles collected. Aborting.")
         return
 
-    newsletter = summarize_with_claude(articles)
-    html       = render_html_email(newsletter)
-    send_email(html, newsletter.get("week_range", "This Week"))
+    newsletter     = summarize_with_claude(articles)
+    html           = render_html_email(newsletter)
+    substack_text  = render_substack_text(newsletter)
+    send_email(html, substack_text, newsletter.get("week_range", "This Week"))
 
     log.info("=== Done ===")
 
