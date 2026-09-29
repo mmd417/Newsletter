@@ -447,6 +447,21 @@ def render_html_email(newsletter: dict) -> str:
     week_range = newsletter.get("week_range", "")
     stories    = newsletter.get("stories", [])
 
+    # Build the at-a-glance headlines list
+    headlines_html = ""
+    for story in sorted(stories, key=lambda s: s.get("rank", 99)):
+        rank  = story.get("rank", "")
+        stype = story.get("story_type", "national")
+        icon, label, bg, fg = TYPE_LABELS.get(stype, ("📰", stype.title(), "#f5f0ea", "#444"))
+        headlines_html += f"""
+          <tr><td style="padding:5px 0;">
+            <span style="font-size:13px;font-weight:bold;color:#d4a84b;margin-right:8px;">#{rank}</span>
+            <span style="background:{bg};color:{fg};border-radius:3px;
+                         padding:1px 6px;font-size:10px;font-weight:bold;
+                         margin-right:8px;">{icon} {label}</span>
+            <span style="font-size:13px;color:#1a1a1a;">{story['headline']}</span>
+          </td></tr>"""
+
     stories_html = ""
     for story in sorted(stories, key=lambda s: s.get("rank", 99)):
         rank  = story.get("rank", "")
@@ -526,6 +541,15 @@ def render_html_email(newsletter: dict) -> str:
         <p style="margin:0;font-size:13px;color:#888;">{week_range}</p>
       </td></tr>
 
+      <!-- Top headlines summary -->
+      <tr><td style="padding:24px 36px 0;border-bottom:2px solid #f0ebe3;">
+        <p style="margin:0 0 14px;font-size:11px;font-weight:bold;color:#b0956a;
+                  letter-spacing:1.2px;text-transform:uppercase;">This week</p>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          {headlines_html}
+        </table>
+      </td></tr>
+
       <!-- Body -->
       <tr><td style="padding:0 36px 36px;">
         <table width="100%" cellpadding="0" cellspacing="0">
@@ -560,6 +584,16 @@ def render_substack_text(newsletter: dict) -> str:
     week_range = newsletter.get("week_range", "")
     lines = []
     lines.append(f"🇵🇱 Weekly Debrief: Poland — {week_range}")
+    lines.append("")
+
+    # At-a-glance headline list
+    lines.append("THIS WEEK")
+    lines.append("")
+    for story in sorted(newsletter.get("stories", []), key=lambda s: s.get("rank", 99)):
+        stype = story.get("story_type", "").upper().replace("-", "–")
+        lines.append(f"  #{story.get('rank','')}  [{stype}]  {story['headline']}")
+    lines.append("")
+    lines.append("=" * 60)
     lines.append("")
 
     for story in sorted(newsletter.get("stories", []), key=lambda s: s.get("rank", 99)):
