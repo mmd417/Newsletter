@@ -163,12 +163,14 @@ For each story, assign exactly one story_type tag:
 — FOR EACH STORY, WRITE THREE TIGHT SECTIONS —
 
 1. HEADLINE
-Write a punchy headline that captures both what happened AND why it matters — in one line. \
-Lead with the implication or consequence, not the raw bureaucratic event. \
-Think: what would make a smart, busy American stop scrolling? \
-Good: "Poland Just Doubled Its NATO Bet — and It's Pointed Directly at Russia" \
-Bad: "Poland Signs New Defense Agreement with United States" \
-The headline should feel like a sharp friend's text, not a wire service slug.
+Write a clear, informative headline that tells the reader exactly what happened and why it matters — \
+in one line. Pack the key takeaway directly into the headline; do not tease or withhold it. \
+Avoid clickbait constructions like "— and the Irony Is Rich" or "— and It's Starting to Cost Real Money." \
+The reader should finish the headline knowing the story, not just curious about it. \
+Good: "Trump Praises Poland's New President at Polish-American Gala, Complicating Tusk's Coalition" \
+Good: "Kraków Municipal Vote Shows Losses for Both Major Parties as Independents Surge" \
+Bad: "Trump Praised Poland's President — and the Irony Is Rich" \
+Bad: "Kraków Just Had an Election — and Every Major Party Lost"
 
 2. WHAT HAPPENED
 2 sentences max: who did what, and when/where. No editorializing here — just the facts.
@@ -470,7 +472,7 @@ def render_html_email(newsletter: dict) -> str:
             <span style="font-size:13px;font-weight:bold;color:#d4a84b;margin-right:8px;">#{rank}</span>
             <span style="background:{bg};color:{fg};border-radius:3px;
                          padding:1px 6px;font-size:10px;font-weight:bold;
-                         margin-right:8px;">{icon} {label}</span>
+                         margin-right:8px;">[{icon} {label}]</span>
             <span style="font-size:13px;color:#1a1a1a;">{story['headline']}</span>
           </td></tr>"""
 
@@ -488,7 +490,7 @@ def render_html_email(newsletter: dict) -> str:
             <span style="font-size:18px;font-weight:bold;color:#d4a84b;margin-right:6px;">#{rank}</span>
             <span style="background:{bg};color:{fg};border-radius:4px;
                          padding:2px 8px;font-size:11px;font-weight:bold;letter-spacing:0.5px;">
-              {icon} {label}
+              [{icon} {label}]
             </span>
           </p>
 
@@ -612,7 +614,7 @@ def render_substack_html(newsletter: dict) -> str:
     for story in stories:
         rank  = story.get("rank", "")
         stype = STORY_TYPE_LABELS.get(story.get("story_type", ""), "")
-        parts.append(f"<p><strong>#{rank}</strong> &nbsp; <em>{stype}</em> &nbsp; {story['headline']}</p>")
+        parts.append(f"<p><strong>#{rank}</strong> &nbsp; [<em>{stype}</em>] &nbsp; {story['headline']}</p>")
     parts.append("<hr>")
 
     for story in stories:
@@ -620,7 +622,7 @@ def render_substack_html(newsletter: dict) -> str:
         stype = STORY_TYPE_LABELS.get(story.get("story_type", ""), "")
 
         parts.append(f"<h2>#{rank} &middot; {story['headline']}</h2>")
-        parts.append(f"<p><em>{stype}</em></p>")
+        parts.append(f"<p>[<em>{stype}</em>]</p>")
 
         parts.append("<p><strong>What happened</strong></p>")
         parts.append(f"<p>{story['what_happened']}</p>")
