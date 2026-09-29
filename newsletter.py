@@ -575,48 +575,76 @@ def render_html_email(newsletter: dict) -> str:
 
 # ── Email Sending ──────────────────────────────────────────────────────────────
 
+STORY_TYPE_LABELS = {
+    "national":      "National",
+    "international": "International",
+    "us-poland":     "US – Poland",
+    "regional":      "Regional",
+}
+
 def render_substack_text(newsletter: dict) -> str:
     """
-    Render a plain-text version of the newsletter formatted for clean
-    copy-paste into Substack. Uses markdown-style headings and dividers
-    that Substack's editor preserves on paste.
+    Render a Substack-ready markdown version of the newsletter.
+    Paste directly into the Substack editor — headers, bold labels,
+    and horizontal rules all render natively.
     """
     week_range = newsletter.get("week_range", "")
-    lines = []
-    lines.append(f"🇵🇱 Weekly Debrief: Poland — {week_range}")
+    stories    = sorted(newsletter.get("stories", []), key=lambda s: s.get("rank", 99))
+    lines      = []
+
+    # Title (Substack H1)
+    lines.append(f"# \U0001f1f5\U0001f1f1 Weekly Debrief: Poland")
+    lines.append(f"### {week_range}")
+    lines.append("")
+    lines.append("---")
     lines.append("")
 
-    # At-a-glance headline list
-    lines.append("THIS WEEK")
+    # At-a-glance summary (Substack H2)
+    lines.append("## This Week")
     lines.append("")
-    for story in sorted(newsletter.get("stories", []), key=lambda s: s.get("rank", 99)):
-        stype = story.get("story_type", "").upper().replace("-", "–")
-        lines.append(f"  #{story.get('rank','')}  [{stype}]  {story['headline']}")
-    lines.append("")
-    lines.append("=" * 60)
-    lines.append("")
-
-    for story in sorted(newsletter.get("stories", []), key=lambda s: s.get("rank", 99)):
+    for story in stories:
         rank  = story.get("rank", "")
-        stype = story.get("story_type", "").upper().replace("-", "–")
-        lines.append(f"#{rank} [{stype}]  {story['headline']}")
+        stype = STORY_TYPE_LABELS.get(story.get("story_type", ""), "")
+        lines.append(f"**#{rank}** &nbsp; *{stype}* &nbsp; {story['headline']}")
         lines.append("")
-        lines.append("WHAT HAPPENED")
+    lines.append("---")
+    lines.append("")
+
+    # Full stories
+    for story in stories:
+        rank  = story.get("rank", "")
+        stype = STORY_TYPE_LABELS.get(story.get("story_type", ""), "")
+
+        # Story headline as H2
+        lines.append(f"## #{rank} · {story['headline']}")
+        lines.append(f"*{stype}*")
+        lines.append("")
+
+        lines.append("**What happened**")
+        lines.append("")
         lines.append(story["what_happened"])
         lines.append("")
-        lines.append("WHY IT MATTERS")
+
+        lines.append("**Why it matters**")
+        lines.append("")
         lines.append(story["why_it_matters"])
         lines.append("")
-        lines.append("SENTIMENT & REACTION")
+
+        lines.append("**Sentiment & reaction**")
+        lines.append("")
         lines.append(story["sentiment_and_reaction"])
         lines.append("")
-        lines.append(f"Source: {story['source']} · {story['bias']} · {story['url']}")
+
+        lines.append(f"*Source: [{story['source']}]({story['url']}) · {story['bias']}*")
         lines.append("")
-        lines.append("—" * 60)
+        lines.append("---")
         lines.append("")
 
-    lines.append("Sources: Gazeta Wyborcza · Rzeczpospolita · Onet.pl · TVN24 · Polsat News · Tygodnik Powszechny · Do Rzeczy · Interia · WP · Bankier.pl")
-    lines.append(f"Generated {datetime.now().strftime('%B %d, %Y')}")
+    # Footer
+    lines.append("*Sources: Gazeta Wyborcza · Rzeczpospolita · Onet.pl · TVN24 · Polsat News · Tygodnik Powszechny · Do Rzeczy · Interia · WP · Bankier.pl*")
+    lines.append("")
+    lines.append(f"*Generated {datetime.now().strftime('%B %d, %Y')}*")
+
     return "\n".join(lines)
 
 
