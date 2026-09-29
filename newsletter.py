@@ -111,20 +111,30 @@ OUTLETS = [
 ]
 
 # ── Claude System Prompt ───────────────────────────────────────────────────────
-SYSTEM_PROMPT = """You are a senior editor writing a weekly briefing on Poland for an English-speaking reader \
-who follows international affairs but has limited background on Polish politics, history, or institutions.
+SYSTEM_PROMPT = """You are a senior editor writing a weekly briefing on Poland for an English-speaking \
+American reader who follows international affairs but has limited background on Polish politics, \
+history, or institutions.
 
 You will receive a JSON list of news articles from Polish outlets over the past week. \
 Each article includes: title, summary/description, outlet name, political bias, and URL. \
 You may also receive social media excerpts flagged with "source": "social_media".
 
-— SELECTION STANDARD —
-Include exactly 4–6 stories — never fewer than 4, never more than 6. A story earns its place only if it:
+— SELECTION & RANKING —
+Select and rank exactly 5 stories. Rank #1 is the single most important story of the week — \
+the one a well-informed person most needs to know. Rank the rest in descending order of importance.
+
+A story earns its place only if it:
   • Signals a real shift in Polish politics, law, economy, or foreign policy
   • Reveals how Polish institutions or society actually function
-  • Gives an informed reader genuine insight unavailable from generic Western coverage
+  • Has direct relevance to the US, NATO, the EU, or global affairs
+  • Gives genuine insight unavailable from generic Western media
 Exclude: gossip, routine crime, minor local events, PR, near-duplicates (keep the best version).
-Fewer strong stories beat a padded list.
+
+For each story, assign exactly one story_type tag:
+  "national"       — primarily a domestic Polish story
+  "international"  — Poland's role in EU, NATO, or global affairs
+  "us-poland"      — directly involves US-Poland relations, US policy, or American interests
+  "regional"       — Central/Eastern European context beyond Poland alone
 
 — FOR EACH STORY, WRITE THREE TIGHT SECTIONS —
 
@@ -134,51 +144,38 @@ One crisp headline (your framing, not a translation). Then 2 sentences max: who 
 2. WHY IT MATTERS
 2–3 sentences. Assume the reader does NOT know Polish political history or institutions — \
 briefly name any essential background (e.g. what a referenced law, party, or institution is, \
-why a particular relationship or conflict has been ongoing). Then state why this development is significant \
-beyond Poland's borders or why it changes something meaningful domestically.
+why a particular conflict has been ongoing). Then state clearly why this is significant — \
+especially any connection to US interests, NATO, or the broader Western world.
 
 3. SENTIMENT & REACTION
 2 sentences maximum. Lead with the sharpest, most specific reaction available — \
 quote or paraphrase a named person with their full name and role on first mention \
 (e.g. "Donald Tusk, Poland's Prime Minister," not just "Tusk"). \
-If outlets frame the story differently, capture that divergence in one sentence. \
-Cut anything that cannot be sourced directly to the articles.
+If outlets frame the story differently across the political spectrum, capture that in one sentence.
 
 — NAMES & TITLES —
-Every person named in any section must be identified on first mention with their full name and role \
-(e.g. "Andrzej Duda, Poland's President," "Jarosław Kaczyński, leader of the opposition PiS party," \
-"Ursula von der Leyen, President of the European Commission"). \
-Never assume the reader recognises a name from Polish or European politics.
+Every person named must be identified on first mention with their full name and role \
+(e.g. "Andrzej Duda, Poland's President," "Jarosław Kaczyński, leader of the opposition PiS party"). \
+Never assume the reader recognises a Polish or European name.
 
 — STYLE —
-Write in plain, direct English. No padding, no throat-clearing. \
-Each section should be as short as it can be while still being complete. \
-Prefer concrete nouns and active verbs.
-
-— GROUPING —
-Organise stories under (omit empty sections):
-  🏛️ Politics & Government
-  💰 Economy & Business
-  🇪🇺 International & EU Affairs
-  🧭 Society & Culture
+Plain, direct English. No padding. Each section as short as it can be while still complete. \
+Concrete nouns and active verbs.
 
 Output format — return ONLY valid JSON, no markdown fences, no preamble:
 {
-  "week_range": "May 12–18, 2026",
-  "sections": [
+  "week_range": "Sep 22–28, 2026",
+  "stories": [
     {
-      "title": "🏛️ Politics & Government",
-      "stories": [
-        {
-          "headline": "...",
-          "what_happened": "...",
-          "why_it_matters": "...",
-          "sentiment_and_reaction": "...",
-          "source": "Outlet Name",
-          "bias": "center-left / liberal",
-          "url": "https://..."
-        }
-      ]
+      "rank": 1,
+      "story_type": "national",
+      "headline": "...",
+      "what_happened": "...",
+      "why_it_matters": "...",
+      "sentiment_and_reaction": "...",
+      "source": "Outlet Name",
+      "bias": "center-left / liberal",
+      "url": "https://..."
     }
   ]
 }"""
@@ -414,23 +411,35 @@ def summarize_with_claude(articles: list[dict]) -> dict:
 
 # ── Email Rendering ────────────────────────────────────────────────────────────
 
+TYPE_LABELS = {
+    "national":      ("🏛", "National",      "#e8f0fe", "#1a56db"),
+    "international": ("🌍", "International", "#fef3c7", "#b45309"),
+    "us-poland":     ("🇺🇸", "US–Poland",    "#fce7f3", "#9d174d"),
+    "regional":      ("🗺", "Regional",      "#ecfdf5", "#065f46"),
+}
+
 def render_html_email(newsletter: dict) -> str:
     """Convert the structured newsletter JSON into a styled HTML email."""
     week_range = newsletter.get("week_range", "")
-    sections   = newsletter.get("sections", [])
+    stories    = newsletter.get("stories", [])
 
     stories_html = ""
-    for section in sections:
+    for story in sorted(stories, key=lambda s: s.get("rank", 99)):
+        rank  = story.get("rank", "")
+        stype = story.get("story_type", "national")
+        icon, label, bg, fg = TYPE_LABELS.get(stype, ("📰", stype.title(), "#f5f0ea", "#444"))
+
         stories_html += f"""
-        <tr><td style="padding: 28px 0 8px;">
-          <h2 style="margin:0;font-size:17px;color:#1a1a1a;font-family:Georgia,serif;
-                     border-bottom:2px solid #e8e0d5;padding-bottom:8px;">
-            {section['title']}
-          </h2>
-        </td></tr>"""
-        for story in section.get("stories", []):
-            stories_html += f"""
         <tr><td style="padding:20px 0;border-bottom:1px solid #f0ebe3;">
+
+          <!-- Rank + type badge row -->
+          <p style="margin:0 0 10px;font-size:12px;color:#999;display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;font-weight:bold;color:#d4a84b;margin-right:6px;">#{rank}</span>
+            <span style="background:{bg};color:{fg};border-radius:4px;
+                         padding:2px 8px;font-size:11px;font-weight:bold;letter-spacing:0.5px;">
+              {icon} {label}
+            </span>
+          </p>
 
           <!-- Headline -->
           <a href="{story['url']}" style="text-decoration:none;">
@@ -529,25 +538,24 @@ def render_substack_text(newsletter: dict) -> str:
     lines.append(f"🇵🇱 Weekly Debrief: Poland — {week_range}")
     lines.append("")
 
-    for section in newsletter.get("sections", []):
-        lines.append(f"── {section['title']} ──")
+    for story in sorted(newsletter.get("stories", []), key=lambda s: s.get("rank", 99)):
+        rank  = story.get("rank", "")
+        stype = story.get("story_type", "").upper().replace("-", "–")
+        lines.append(f"#{rank} [{stype}]  {story['headline']}")
         lines.append("")
-        for story in section.get("stories", []):
-            lines.append(f"### {story['headline']}")
-            lines.append("")
-            lines.append("WHAT HAPPENED")
-            lines.append(story["what_happened"])
-            lines.append("")
-            lines.append("WHY IT MATTERS")
-            lines.append(story["why_it_matters"])
-            lines.append("")
-            lines.append("SENTIMENT & REACTION")
-            lines.append(story["sentiment_and_reaction"])
-            lines.append("")
-            lines.append(f"Source: {story['source']} · {story['bias']} · {story['url']}")
-            lines.append("")
-            lines.append("—" * 60)
-            lines.append("")
+        lines.append("WHAT HAPPENED")
+        lines.append(story["what_happened"])
+        lines.append("")
+        lines.append("WHY IT MATTERS")
+        lines.append(story["why_it_matters"])
+        lines.append("")
+        lines.append("SENTIMENT & REACTION")
+        lines.append(story["sentiment_and_reaction"])
+        lines.append("")
+        lines.append(f"Source: {story['source']} · {story['bias']} · {story['url']}")
+        lines.append("")
+        lines.append("—" * 60)
+        lines.append("")
 
     lines.append("Sources: Gazeta Wyborcza · Rzeczpospolita · Onet.pl · TVN24 · Polsat News · Tygodnik Powszechny · Do Rzeczy · Interia · WP · Bankier.pl")
     lines.append(f"Generated {datetime.now().strftime('%B %d, %Y')}")
