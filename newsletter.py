@@ -582,89 +582,66 @@ STORY_TYPE_LABELS = {
     "regional":      "Regional",
 }
 
-def render_substack_text(newsletter: dict) -> str:
+def render_substack_html(newsletter: dict) -> str:
     """
-    Render a Substack-ready markdown version of the newsletter.
-    Paste directly into the Substack editor — headers, bold labels,
-    and horizontal rules all render natively.
+    Render the newsletter as HTML suitable for copy-paste into Substack.
+    Uses real HTML tags so Gmail's clipboard carries rich formatting —
+    headings, bold, italics, and dividers all paste correctly in the editor.
     """
     week_range = newsletter.get("week_range", "")
     stories    = sorted(newsletter.get("stories", []), key=lambda s: s.get("rank", 99))
-    lines      = []
+    parts      = []
 
-    # Title (Substack H1)
-    lines.append(f"# \U0001f1f5\U0001f1f1 Weekly Debrief: Poland")
-    lines.append(f"### {week_range}")
-    lines.append("")
-    lines.append("---")
-    lines.append("")
+    parts.append(f"<h1>\U0001f1f5\U0001f1f1 Weekly Debrief: Poland</h1>")
+    parts.append(f"<h3>{week_range}</h3>")
+    parts.append("<hr>")
 
-    # At-a-glance summary (Substack H2)
-    lines.append("## This Week")
-    lines.append("")
+    parts.append("<h2>This Week</h2>")
     for story in stories:
         rank  = story.get("rank", "")
         stype = STORY_TYPE_LABELS.get(story.get("story_type", ""), "")
-        lines.append(f"**#{rank}** &nbsp; *{stype}* &nbsp; {story['headline']}")
-        lines.append("")
-    lines.append("---")
-    lines.append("")
+        parts.append(f"<p><strong>#{rank}</strong> &nbsp; <em>{stype}</em> &nbsp; {story['headline']}</p>")
+    parts.append("<hr>")
 
-    # Full stories
     for story in stories:
         rank  = story.get("rank", "")
         stype = STORY_TYPE_LABELS.get(story.get("story_type", ""), "")
 
-        # Story headline as H2
-        lines.append(f"## #{rank} · {story['headline']}")
-        lines.append(f"*{stype}*")
-        lines.append("")
+        parts.append(f"<h2>#{rank} &middot; {story['headline']}</h2>")
+        parts.append(f"<p><em>{stype}</em></p>")
 
-        lines.append("**What happened**")
-        lines.append("")
-        lines.append(story["what_happened"])
-        lines.append("")
+        parts.append("<p><strong>What happened</strong></p>")
+        parts.append(f"<p>{story['what_happened']}</p>")
 
-        lines.append("**Why it matters**")
-        lines.append("")
-        lines.append(story["why_it_matters"])
-        lines.append("")
+        parts.append("<p><strong>Why it matters</strong></p>")
+        parts.append(f"<p>{story['why_it_matters']}</p>")
 
-        lines.append("**Sentiment & reaction**")
-        lines.append("")
-        lines.append(story["sentiment_and_reaction"])
-        lines.append("")
+        parts.append("<p><strong>Sentiment &amp; reaction</strong></p>")
+        parts.append(f"<p>{story['sentiment_and_reaction']}</p>")
 
-        lines.append(f"*Source: [{story['source']}]({story['url']}) · {story['bias']}*")
-        lines.append("")
-        lines.append("---")
-        lines.append("")
+        parts.append(f"<p><em>Source: <a href=\"{story['url']}\">{story['source']}</a> &middot; {story['bias']}</em></p>")
+        parts.append("<hr>")
 
-    # Footer
-    lines.append("*Sources: Gazeta Wyborcza · Rzeczpospolita · Onet.pl · TVN24 · Polsat News · Tygodnik Powszechny · Do Rzeczy · Interia · WP · Bankier.pl*")
-    lines.append("")
-    lines.append(f"*Generated {datetime.now().strftime('%B %d, %Y')}*")
+    parts.append("<p><em>Sources: Gazeta Wyborcza &middot; Rzeczpospolita &middot; Onet.pl &middot; TVN24 &middot; Polsat News &middot; Tygodnik Powszechny &middot; Do Rzeczy &middot; Interia &middot; WP &middot; Bankier.pl</em></p>")
+    parts.append(f"<p><em>Generated {datetime.now().strftime('%B %d, %Y')}</em></p>")
 
-    return "\n".join(lines)
+    return "\n".join(parts)
 
 
-def send_email(html_body: str, substack_text: str, week_range: str):
+def send_email(html_body: str, substack_html: str, week_range: str):
     """
     Send the newsletter to all recipients via Gmail SMTP.
-    Includes the styled HTML preview and a plain-text Substack-ready
-    copy-paste section at the bottom of the same email.
+    The Substack section is rendered as real HTML so copying and pasting
+    into Substack's editor preserves headings, bold, and dividers.
     """
-    # Wrap the substack text in a minimal HTML block appended below the styled newsletter
     substack_block = f"""
-<div style="margin:40px auto;max-width:620px;font-family:monospace;font-size:13px;
-            color:#333;background:#f5f5f5;border:1px solid #ddd;border-radius:6px;
-            padding:28px 32px;">
-  <p style="margin:0 0 16px;font-size:12px;font-weight:bold;color:#999;
-             letter-spacing:1px;text-transform:uppercase;">
-    📋 Substack copy-paste version below
+<div style="margin:40px auto;max-width:620px;padding:28px 32px;
+            border-top:3px solid #e8e0d5;font-family:Georgia,serif;">
+  <p style="margin:0 0 20px;font-size:12px;font-weight:bold;color:#999;
+             letter-spacing:1px;text-transform:uppercase;font-family:Helvetica,Arial,sans-serif;">
+    📋 Substack version &mdash; select all text below this line and paste into the editor
   </p>
-  <pre style="margin:0;white-space:pre-wrap;font-family:Georgia,serif;
-              font-size:14px;line-height:1.8;color:#222;">{substack_text}</pre>
+  {substack_html}
 </div>"""
 
     full_html = html_body.replace("</body>", substack_block + "</body>")
@@ -692,10 +669,10 @@ def main():
         log.error("No articles collected. Aborting.")
         return
 
-    newsletter     = summarize_with_claude(articles)
-    html           = render_html_email(newsletter)
-    substack_text  = render_substack_text(newsletter)
-    send_email(html, substack_text, newsletter.get("week_range", "This Week"))
+    newsletter    = summarize_with_claude(articles)
+    html          = render_html_email(newsletter)
+    substack_html = render_substack_html(newsletter)
+    send_email(html, substack_html, newsletter.get("week_range", "This Week"))
 
     log.info("=== Done ===")
 
