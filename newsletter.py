@@ -163,16 +163,24 @@ For each story, assign exactly one story_type tag:
 — FOR EACH STORY, WRITE THREE TIGHT SECTIONS —
 
 1. HEADLINE
-Write a calm, analytical headline that names the underlying trend or significance — not just the surface event. \
-No em-dashes. No "— and". No exclamation. No "Just," no "World Noticed," no twist endings. \
-The best headlines read like a sharp analyst's one-sentence takeaway, not a news alert. \
-Structure: what the action reveals or signals, not just what happened. \
+HARD RULES — violating any of these is an error:
+  • NO em-dash (—) anywhere in the headline, ever.
+  • NO split-clause construction of any kind (no "X — and Y", no "X, and that means Y").
+  • NO "Just", no "Finally", no "Worth Watching", no "Eating Itself", no "Meant It".
+  • NO second clause that withholds the point ("a Bigger Deal Than It Sounds", "the Details Are Nearly Finalized").
+
+FORMAT: One clean, complete sentence. State what happened and what it signals. \
+Structure: [actor + action], [what it reveals about the larger situation]. \
+The tone is a serious newspaper or think-tank brief — not a tweet, not a newsletter teaser.
+
 Good: "By signing a fuel profits tax, Poland's president signals the limits of his veto power" \
-Good: "Activists install an abortion pill vending machine in Warsaw, testing the boundaries of Poland's new government" \
+Good: "Poland moves toward hosting a permanent US Army base, reflecting its shift to front-line NATO status" \
+Good: "Poland grants Apache helicopter maintenance rights to its own engineers, reducing dependence on US logistics" \
 Good: "Kraków municipal results show both major parties losing ground to independents" \
-Bad: "Poland's President Blinked on Fuel Profits — and His Admission Changes the Political Game" (em-dash + "and" twist) \
-Bad: "Poland Just Got Its Own Abortion Vending Machine — and the World Noticed" \
-Bad: "Kraków Just Had an Election — and Every Major Party Lost"
+Bad (em-dash twist): "Poland Is About to Host a Permanent US Army Base — and the Details Are Nearly Finalized" \
+Bad (em-dash twist): "Poland Just Won the Right to Fix Its Own Apache Helicopters — a Bigger Deal Than It Sounds" \
+Bad (em-dash twist): "Russia Threatened Kyiv's Diplomats — Poland Said We're Staying and Meant It" \
+Bad (casual/dramatic): "Poland's Hard-Right Insurgency Is Eating Itself — and That's Actually Worth Watching"
 
 2. WHAT HAPPENED
 2 sentences max: who did what, and when/where. No editorializing here — just the facts.
