@@ -164,13 +164,13 @@ For each story, assign exactly one story_type tag:
 
 1. HEADLINE
 Write a calm, analytical headline that names the underlying trend or significance — not just the surface event. \
-No em-dashes. No exclamation. No "Just," no "World Noticed," no twist endings. \
+No em-dashes. No "— and". No exclamation. No "Just," no "World Noticed," no twist endings. \
 The best headlines read like a sharp analyst's one-sentence takeaway, not a news alert. \
 Structure: what the action reveals or signals, not just what happened. \
 Good: "By signing a fuel profits tax, Poland's president signals the limits of his veto power" \
 Good: "Activists install an abortion pill vending machine in Warsaw, testing the boundaries of Poland's new government" \
 Good: "Kraków municipal results show both major parties losing ground to independents" \
-Bad: "Poland's President Blinked on Fuel Profits — and His Admission Changes the Political Game" \
+Bad: "Poland's President Blinked on Fuel Profits — and His Admission Changes the Political Game" (em-dash + "and" twist) \
 Bad: "Poland Just Got Its Own Abortion Vending Machine — and the World Noticed" \
 Bad: "Kraków Just Had an Election — and Every Major Party Lost"
 
