@@ -454,7 +454,39 @@ def summarize_with_claude(articles: list[dict]) -> dict:
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
-    return json.loads(raw)
+    newsletter = json.loads(raw)
+
+    # Post-process: rewrite any headline that contains an em-dash
+    newsletter = fix_headlines(client, newsletter)
+    return newsletter
+
+
+HEADLINE_FIX_PROMPT = """Rewrite this headline so it is one clean sentence with no em-dash (—), \
+no split-clause construction, and no "— and" pattern. \
+Format: [actor + action], [what it reveals about the larger situation]. \
+Serious newspaper tone. Return only the rewritten headline, nothing else.
+
+Headline to rewrite: {headline}"""
+
+
+def fix_headlines(client, newsletter: dict) -> dict:
+    """Rewrite any headline that contains an em-dash using a targeted Claude call."""
+    for story in newsletter.get("stories", []):
+        headline = story.get("headline", "")
+        if "—" in headline or " -- " in headline:
+            log.info(f"Rewriting headline with em-dash: {headline}")
+            response = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=200,
+                messages=[{
+                    "role": "user",
+                    "content": HEADLINE_FIX_PROMPT.format(headline=headline),
+                }],
+            )
+            new_headline = response.content[0].text.strip().strip('"')
+            log.info(f"  → {new_headline}")
+            story["headline"] = new_headline
+    return newsletter
 
 
 # ── Email Rendering ────────────────────────────────────────────────────────────
