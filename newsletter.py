@@ -163,15 +163,16 @@ For each story, assign exactly one story_type tag:
 — FOR EACH STORY, WRITE THREE TIGHT SECTIONS —
 
 1. HEADLINE
-Write a calm, factual headline in the style of a serious newspaper. State what happened and the key context. \
-No drama, no exclamation, no "Just," no "World Noticed," no "— and X" twist endings. \
-The tone should be measured and direct — more Reuters than BuzzFeed. \
-Good: "Activists Install Abortion Pill Vending Machine in Warsaw, Reigniting National Debate" \
-Good: "Kraków Municipal Vote Shows Losses for Both Major Parties as Independents Surge" \
-Good: "Trump Praises Poland's New President at Polish-American Gala, Complicating Tusk's Coalition" \
+Write a calm, analytical headline that names the underlying trend or significance — not just the surface event. \
+No em-dashes. No exclamation. No "Just," no "World Noticed," no twist endings. \
+The best headlines read like a sharp analyst's one-sentence takeaway, not a news alert. \
+Structure: what the action reveals or signals, not just what happened. \
+Good: "By signing a fuel profits tax, Poland's president signals the limits of his veto power" \
+Good: "Activists install an abortion pill vending machine in Warsaw, testing the boundaries of Poland's new government" \
+Good: "Kraków municipal results show both major parties losing ground to independents" \
+Bad: "Poland's President Blinked on Fuel Profits — and His Admission Changes the Political Game" \
 Bad: "Poland Just Got Its Own Abortion Vending Machine — and the World Noticed" \
-Bad: "Kraków Just Had an Election — and Every Major Party Lost" \
-Bad: "Trump Praised Poland's President — and the Irony Is Rich"
+Bad: "Kraków Just Had an Election — and Every Major Party Lost"
 
 2. WHAT HAPPENED
 2 sentences max: who did what, and when/where. No editorializing here — just the facts.
