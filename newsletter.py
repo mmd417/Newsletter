@@ -163,14 +163,15 @@ For each story, assign exactly one story_type tag:
 — FOR EACH STORY, WRITE THREE TIGHT SECTIONS —
 
 1. HEADLINE
-Write a clear, informative headline that tells the reader exactly what happened and why it matters — \
-in one line. Pack the key takeaway directly into the headline; do not tease or withhold it. \
-Avoid clickbait constructions like "— and the Irony Is Rich" or "— and It's Starting to Cost Real Money." \
-The reader should finish the headline knowing the story, not just curious about it. \
-Good: "Trump Praises Poland's New President at Polish-American Gala, Complicating Tusk's Coalition" \
+Write a calm, factual headline in the style of a serious newspaper. State what happened and the key context. \
+No drama, no exclamation, no "Just," no "World Noticed," no "— and X" twist endings. \
+The tone should be measured and direct — more Reuters than BuzzFeed. \
+Good: "Activists Install Abortion Pill Vending Machine in Warsaw, Reigniting National Debate" \
 Good: "Kraków Municipal Vote Shows Losses for Both Major Parties as Independents Surge" \
-Bad: "Trump Praised Poland's President — and the Irony Is Rich" \
-Bad: "Kraków Just Had an Election — and Every Major Party Lost"
+Good: "Trump Praises Poland's New President at Polish-American Gala, Complicating Tusk's Coalition" \
+Bad: "Poland Just Got Its Own Abortion Vending Machine — and the World Noticed" \
+Bad: "Kraków Just Had an Election — and Every Major Party Lost" \
+Bad: "Trump Praised Poland's President — and the Irony Is Rich"
 
 2. WHAT HAPPENED
 2 sentences max: who did what, and when/where. No editorializing here — just the facts.
